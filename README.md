@@ -101,7 +101,3 @@ Restart the server after making changes to see them reflected.
 
 Personal portfolio project by James Zaccardo
 
-## Original Version
-
-This is a Rust recreation of the original Nuxt 2 portfolio located at:
-`/Users/jimzaccardo/Documents/GitHub/persona`
