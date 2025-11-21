@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div>
+        <h1 class="intro">
+            Hi, I'm James Zaccardo,
+            <span>I'm a Technical Architect</span>
+        </h1>
+        <div class="content">
+            <h2>
+                14+ years building robust, performant software at scale.
+                <br /><br />
+                I architect microservices that handle millions of requests, deploy
+                with confidence through battle-tested CI/CD pipelines, and integrate
+                cutting-edge LLM capabilities into production systems.
+                <br /><br />
+                I know how to catch problems before they happen. Check out some of my
+                <a href="#mywork"><span class="underline">past work.</span></a>
+                <br /><br />
+                Built with: C++, React, TypeScript, Rust, Go, C#, Ruby on Rails, Java
+                Spring Boot.
+            </h2>
+        </div>
+    </div>
+</div>
+
+<div class="contain" id="mywork">
+    <div class="mobile">
+        <h1>Recent Work</h1>
+    </div>
+    {% for job in jobs %}
+        {% include "partials/job.html" %}
+    {% endfor %}
+</div>
+{% endblock %}

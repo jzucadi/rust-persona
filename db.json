@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "key": 1,
+      "name": "US Department of Veterans Affairs",
+      "details": "Managed Kubernetes and Service Mesh (ISTIO) in Microservices architecture. Orchestrated microservices architecture with Kubernetes and Istio. Developed and consumed APIs with Go and Postgres. Implemented CI/CD pipelines using Jenkins and Docker. Implemented monitoring and alerting using Prometheus and Grafana.",
+      "tools": "AI, LLM, ML, Microservices, AWS, Kubernetes, React, Typescript, Next.js, D3.js, Go, Postgres, Agile/Scrum, HTML, SASS",
+      "screen": "/va-gov.png",
+      "link": "https://www.va.gov/"
+    },
+    {
+      "key": 2,
+      "name": "Newfront Insurance",
+      "details": "Developed new company website and mobile app. This included revamping the user flow across the product, creating a new design system, and expanding API endpoints. ",
+      "tools": "React, Typescript, Next.js, AWS, D3.js, Go, Postgres, Agile/Scrum, HTML, SASS",
+      "screen": "/nffff.svg",
+      "link": "https://www.newfront.com/"
+    },
+    {
+      "key": 3,
+      "name": "Avalara",
+      "details": "Developed next generation tax management software. Led team of five from start to finish including design, scoping, diagramming, development, testing, implementation, and maintenance in a Agile/Scrum environment. ",
+      "tools": "React, Typescript, Python, Node.js, Postgres, AWS, Jira, Git, HTML, SASS",
+      "screen": "/av.svg",
+      "link": "https://www.avalara.com/"
+    },
+    {
+      "key": 4,
+      "name": "Georgetown University",
+      "details": "Developed new graduate school website with a custom CMS for employees. Worked with UX and Design teams to translate feature specifications into a reusable code/template library. Refactored legacy codebase into modern MVC architecture application.",
+      "tools": "C#, Javascript, .Net, REST-API, MySQL, Jira, Git, HTML, SASS",
+      "screen": "/gt.svg",
+      "link": "https://scs.georgetown.edu/"
+    }
+  ]
+}
