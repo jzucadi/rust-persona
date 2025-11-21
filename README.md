@@ -1,6 +1,6 @@
 # Rust Portfolio
 
-A portfolio website built with Rust, Axum, and Askama, recreated from the original Nuxt 2 version.
+A portfolio website built with Rust, Axum, and Askama, recreated my original which was done in nuxt v. 2.
 
 ## Features
 
