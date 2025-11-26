@@ -281,6 +281,8 @@ a {
     justify-self: right;
     display: grid;
     align-items: center;
+    cursor: default;
+    overflow: visible;
 }
 
 .pic img {
@@ -288,6 +290,8 @@ a {
     max-width: 650px;
     box-shadow: var(--shad);
     border-radius: 5px;
+    will-change: transform;
+    transform-origin: center center;
 }
 
 .name {
