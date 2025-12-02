@@ -55,6 +55,7 @@ html {
     -moz-osx-font-smoothing: grayscale;
     -webkit-font-smoothing: antialiased;
     box-sizing: border-box;
+    scroll-behavior: smooth;
 }
 
 body {
@@ -75,7 +76,7 @@ body {
 }
 
 #__layout {
-    overflow: hidden;
+    overflow-x: hidden;
     animation: fadein 2s;
 }
 
