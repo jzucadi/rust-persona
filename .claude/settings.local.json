@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(cargo build:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(ssh:*)",
+      "Bash(ssh-add:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)"
     ],
     "deny": [],
     "ask": []
