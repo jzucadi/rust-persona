@@ -102,6 +102,12 @@ a {
     text-decoration: none;
 }
 
+.scroll-link {
+    cursor: pointer;
+    color: var(--main);
+    font-weight: 700;
+}
+
 .underline {
     position: relative;
 }
