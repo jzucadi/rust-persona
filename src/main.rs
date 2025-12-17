@@ -1,5 +1,6 @@
 mod models;
 
+use anyhow::{Context, Result};
 use askama::Template;
 use axum::{
     extract::State,
@@ -8,59 +9,54 @@ use axum::{
     Router,
 };
 use models::{JobData, JobEntry};
-use std::{fs, sync::Arc};
+use std::{env, fs, sync::Arc};
 use tower_http::services::ServeDir;
-use tracing_subscriber;
 
-// Template for the home page
 #[derive(Template)]
 #[template(path = "index.html")]
-struct IndexTemplate {
-    jobs: Vec<JobEntry>,
+struct IndexTemplate<'a> {
+    jobs: &'a [JobEntry],
     year: i32,
 }
 
-// Application state to hold job data
-#[derive(Clone)]
 struct AppState {
     jobs: Vec<JobEntry>,
 }
 
 #[tokio::main]
-async fn main() {
-    // Initialize tracing
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    // Load job data from db.json
-    let job_data = load_jobs().expect("Failed to load job data");
+    let job_data = load_jobs().context("Failed to load job data from db.json")?;
 
-    // Create application state
     let state = Arc::new(AppState {
         jobs: job_data.entries,
     });
 
-    // Build the router
     let app = Router::new()
         .route("/", get(index_handler))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state);
 
-    // Start the server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let addr = env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".to_string());
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .unwrap();
+        .with_context(|| format!("Failed to bind to {}", addr))?;
 
-    tracing::info!("Server listening on http://127.0.0.1:3000");
+    tracing::info!("Server listening on http://{}", addr);
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .context("Server error")?;
+
+    Ok(())
 }
 
-// Handler for the home page
 async fn index_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let current_year = chrono::Datelike::year(&chrono::Local::now());
 
     let template = IndexTemplate {
-        jobs: state.jobs.clone(),
+        jobs: &state.jobs,
         year: current_year,
     };
 
@@ -77,9 +73,8 @@ async fn index_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse 
     }
 }
 
-// Load job data from db.json
-fn load_jobs() -> Result<JobData, Box<dyn std::error::Error>> {
-    let data = fs::read_to_string("db.json")?;
-    let job_data: JobData = serde_json::from_str(&data)?;
+fn load_jobs() -> Result<JobData> {
+    let data = fs::read_to_string("db.json").context("Could not read db.json")?;
+    let job_data: JobData = serde_json::from_str(&data).context("Invalid JSON in db.json")?;
     Ok(job_data)
 }

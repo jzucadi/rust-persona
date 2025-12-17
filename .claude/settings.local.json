@@ -9,7 +9,17 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(git stash:*)",
-      "Bash(git stash pop:*)"
+      "Bash(git stash pop:*)",
+      "Bash(wc:*)",
+      "Bash(cargo tree:*)",
+      "Bash(cargo --version:*)",
+      "Bash(rustc:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo outdated:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
