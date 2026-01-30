@@ -1,34 +1,40 @@
 # Rust Portfolio
 
-A portfolio website built with Rust, Axum, and Askama, recreated my original which was done in nuxt v. 2.
+A portfolio website built with Rust, Axum, and Askama, recreated from the original Nuxt v2 version.
 
 ## Features
 
 - **Rust-powered**: Fast, type-safe backend using Rust
-- **Axum web framework**: Modern, ergonomic web framework built on tokio
+- **Axum web framework**: Modern, ergonomic web framework built on Tokio
 - **Askama templates**: Type-safe template rendering
 - **Static file serving**: Serves CSS, images, and other assets
 - **Dynamic job entries**: Loads portfolio entries from `db.json`
+- **Health endpoint**: JSON health check at `/health`
+- **Security headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- **Configurable**: Bind address and log level via environment variables
+- **Async I/O**: Non-blocking file operations using Tokio
 
 ## Project Structure
 
 ```
 rust-persona/
+├── .github/
+│   └── workflows/
+│       └── rust.yml        # CI workflow (fmt, clippy, build, test)
 ├── src/
-│   ├── main.rs          # Main application entry point
-│   └── models.rs        # Data models for job entries
+│   ├── main.rs             # Application entry point and handlers
+│   └── models.rs           # Data models for job entries
 ├── templates/
-│   ├── base.html        # Base layout template
-│   ├── index.html       # Home page template
+│   ├── base.html           # Base layout template
+│   ├── index.html          # Home page template
 │   └── partials/
-│       └── job.html     # Job entry partial template
+│       └── job.html        # Job entry partial template
 ├── static/
-│   ├── css/
-│   │   └── main.css     # Main stylesheet
-│   └── images/          # Static images and SVGs
-├── db.json              # Job entries database
-├── Cargo.toml           # Rust dependencies
-└── README.md            # This file
+│   ├── css/                # Stylesheets
+│   └── images/             # Static images and SVGs
+├── db.json                 # Job entries database
+├── Cargo.toml              # Rust dependencies
+└── README.md
 ```
 
 ## Prerequisites
@@ -57,18 +63,62 @@ rust-persona/
    http://127.0.0.1:3000
    ```
 
+## Configuration
+
+The application supports the following environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BIND_ADDR` | Address and port to bind the server | `127.0.0.1:3000` |
+| `RUST_LOG` | Log level (trace, debug, info, warn, error) | `info` |
+
+Example:
+```bash
+BIND_ADDR=0.0.0.0:8080 RUST_LOG=debug cargo run
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Portfolio home page (HTML) |
+| `/health` | GET | Health check (JSON: `{"status": "healthy"}`) |
+| `/static/*` | GET | Static assets (CSS, images) |
+
 ## Development
 
-To run in development mode with auto-reloading, you can use `cargo-watch`:
+To run in development mode with auto-reloading:
 
 ```bash
 cargo install cargo-watch
 cargo watch -x run
 ```
 
+## Testing
+
+Run the test suite:
+
+```bash
+cargo test
+```
+
+The project includes 14 tests covering:
+- JSON parsing (valid, invalid, empty, missing fields)
+- Template rendering
+- HTTP handlers (status codes, response content)
+- Security headers
+
+## Code Quality
+
+```bash
+cargo fmt --check    # Check formatting
+cargo clippy         # Lint checks
+cargo test           # Run tests
+```
+
 ## Modifying Job Entries
 
-Edit the `db.json` file to add, remove, or modify portfolio entries. The file structure is:
+Edit the `db.json` file to add, remove, or modify portfolio entries:
 
 ```json
 {
@@ -78,14 +128,14 @@ Edit the `db.json` file to add, remove, or modify portfolio entries. The file st
       "name": "Project Name",
       "details": "Project description",
       "tools": "Technologies used",
-      "screen": "/image-path.png",
+      "screen": "/static/images/screenshot.png",
       "link": "https://project-url.com/"
     }
   ]
 }
 ```
 
-Restart the server after making changes to see them reflected.
+Restart the server after making changes.
 
 ## Technologies Used
 
@@ -93,8 +143,8 @@ Restart the server after making changes to see them reflected.
 - **Axum**: Web framework
 - **Askama**: Type-safe template engine
 - **Tokio**: Async runtime
-- **Tower-HTTP**: HTTP middleware and utilities
+- **Tower-HTTP**: HTTP middleware (static files, security headers)
 - **Serde**: Serialization/deserialization
 - **Chrono**: Date and time library
-
-
+- **Tracing**: Structured logging
+- **Anyhow**: Error handling
