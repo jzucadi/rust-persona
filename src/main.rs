@@ -10,7 +10,7 @@ use axum::{
     Router,
 };
 use models::{JobData, JobEntry};
-use std::{env, fs, sync::Arc};
+use std::{env, sync::Arc};
 use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
 use tracing_subscriber::EnvFilter;
 
@@ -22,7 +22,8 @@ struct IndexTemplate<'a> {
 }
 
 struct AppState {
-    jobs: Box<[JobEntry]>,
+    jobs: Vec<JobEntry>,
+    year: i32,
 }
 
 #[derive(serde::Serialize)]
@@ -37,10 +38,14 @@ async fn main() -> Result<()> {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let job_data = load_jobs().context("Failed to load job data from db.json")?;
+    let job_data = load_jobs()
+        .await
+        .context("Failed to load job data from db.json")?;
+    let year = chrono::Datelike::year(&chrono::Local::now());
 
     let state = Arc::new(AppState {
-        jobs: job_data.entries.into_boxed_slice(),
+        jobs: job_data.entries,
+        year,
     });
 
     let [h1, h2, h3, h4] = security_headers();
@@ -61,9 +66,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("Server listening on http://{}", addr);
 
-    axum::serve(listener, app)
-        .await
-        .context("Server error")?;
+    axum::serve(listener, app).await.context("Server error")?;
 
     Ok(())
 }
@@ -90,17 +93,15 @@ fn security_headers() -> [SetResponseHeaderLayer<HeaderValue>; 4] {
 }
 
 async fn index_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let current_year = chrono::Datelike::year(&chrono::Local::now());
-
     let template = IndexTemplate {
         jobs: &state.jobs,
-        year: current_year,
+        year: state.year,
     };
 
     match template.render() {
         Ok(html) => Html(html).into_response(),
         Err(err) => {
-            tracing::error!("Template rendering error: {}", err);
+            tracing::error!(error = ?err, "Template rendering error");
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
@@ -114,8 +115,10 @@ async fn health_handler() -> impl IntoResponse {
     axum::Json(HealthResponse { status: "healthy" })
 }
 
-fn load_jobs() -> Result<JobData> {
-    let data = fs::read_to_string("db.json").context("Could not read db.json")?;
+async fn load_jobs() -> Result<JobData> {
+    let data = tokio::fs::read_to_string("db.json")
+        .await
+        .context("Could not read db.json")?;
     parse_job_data(&data)
 }
 
@@ -130,7 +133,7 @@ mod tests {
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
-    fn sample_jobs() -> Box<[JobEntry]> {
+    fn sample_jobs() -> Vec<JobEntry> {
         vec![JobEntry {
             key: 1,
             name: "Test Company".to_string(),
@@ -139,11 +142,52 @@ mod tests {
             screen: "/test.png".to_string(),
             link: "https://example.com".to_string(),
         }]
-        .into_boxed_slice()
     }
 
-    fn empty_jobs() -> Box<[JobEntry]> {
-        Vec::new().into_boxed_slice()
+    fn empty_jobs() -> Vec<JobEntry> {
+        Vec::new()
+    }
+
+    fn test_state(jobs: Vec<JobEntry>) -> Arc<AppState> {
+        Arc::new(AppState { jobs, year: 2024 })
+    }
+
+    fn test_app(state: Arc<AppState>) -> Router {
+        let [h1, h2, h3, h4] = security_headers();
+        Router::new()
+            .route("/", get(index_handler))
+            .route("/health", get(health_handler))
+            .layer(h1)
+            .layer(h2)
+            .layer(h3)
+            .layer(h4)
+            .with_state(state)
+    }
+
+    fn get_request(uri: &str) -> Request<Body> {
+        Request::builder()
+            .uri(uri)
+            .body(Body::empty())
+            .expect("Failed to build request")
+    }
+
+    async fn body_bytes(body: axum::body::Body) -> Vec<u8> {
+        body.collect()
+            .await
+            .expect("Failed to collect body")
+            .to_bytes()
+            .to_vec()
+    }
+
+    fn assert_header<B>(
+        response: &axum::http::Response<B>,
+        name: header::HeaderName,
+        expected: &str,
+    ) {
+        assert_eq!(
+            response.headers().get(&name).expect("Header not found"),
+            expected
+        );
     }
 
     #[test]
@@ -240,35 +284,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_index_handler_returns_200() {
-        let state = Arc::new(AppState { jobs: sample_jobs() });
+        let app = test_app(test_state(sample_jobs()));
 
-        let app = Router::new()
-            .route("/", get(index_handler))
-            .with_state(state);
-
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let response = app.oneshot(get_request("/")).await.expect("Request failed");
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
     async fn test_index_handler_returns_html() {
-        let state = Arc::new(AppState { jobs: sample_jobs() });
+        let app = test_app(test_state(sample_jobs()));
 
-        let app = Router::new()
-            .route("/", get(index_handler))
-            .with_state(state);
+        let response = app.oneshot(get_request("/")).await.expect("Request failed");
 
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        let body = response.into_body().collect().await.unwrap().to_bytes();
-        let html = String::from_utf8(body.to_vec()).unwrap();
+        let body = body_bytes(response.into_body()).await;
+        let html = String::from_utf8(body).expect("Invalid UTF-8 in response body");
 
         assert!(html.contains("<!DOCTYPE html>") || html.contains("<html"));
         assert!(html.contains("Test Company"));
@@ -276,109 +306,66 @@ mod tests {
 
     #[tokio::test]
     async fn test_index_handler_empty_jobs() {
-        let state = Arc::new(AppState { jobs: empty_jobs() });
+        let app = test_app(test_state(empty_jobs()));
 
-        let app = Router::new()
-            .route("/", get(index_handler))
-            .with_state(state);
-
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        let response = app.oneshot(get_request("/")).await.expect("Request failed");
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
     async fn test_404_for_unknown_route() {
-        let state = Arc::new(AppState { jobs: empty_jobs() });
-
-        let app = Router::new()
-            .route("/", get(index_handler))
-            .with_state(state);
+        let app = test_app(test_state(empty_jobs()));
 
         let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/nonexistent")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(get_request("/nonexistent"))
             .await
-            .unwrap();
+            .expect("Request failed");
 
         assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
     async fn test_health_endpoint_returns_200() {
-        let state = Arc::new(AppState { jobs: empty_jobs() });
-
-        let app = Router::new()
-            .route("/health", get(health_handler))
-            .with_state(state);
+        let app = test_app(test_state(empty_jobs()));
 
         let response = app
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(get_request("/health"))
             .await
-            .unwrap();
+            .expect("Request failed");
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
     async fn test_health_endpoint_returns_json() {
-        let state = Arc::new(AppState { jobs: empty_jobs() });
-
-        let app = Router::new()
-            .route("/health", get(health_handler))
-            .with_state(state);
+        let app = test_app(test_state(empty_jobs()));
 
         let response = app
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(get_request("/health"))
             .await
-            .unwrap();
+            .expect("Request failed");
 
-        let body = response.into_body().collect().await.unwrap().to_bytes();
-        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let body = body_bytes(response.into_body()).await;
+        let json: serde_json::Value =
+            serde_json::from_slice(&body).expect("Invalid JSON in response");
 
         assert_eq!(json["status"], "healthy");
     }
 
     #[tokio::test]
     async fn test_security_headers_present() {
-        let state = Arc::new(AppState { jobs: empty_jobs() });
+        let app = test_app(test_state(empty_jobs()));
 
-        let [h1, h2, h3, h4] = security_headers();
-        let app = Router::new()
-            .route("/", get(index_handler))
-            .layer(h1)
-            .layer(h2)
-            .layer(h3)
-            .layer(h4)
-            .with_state(state);
+        let response = app.oneshot(get_request("/")).await.expect("Request failed");
 
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(
-            response.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
-            "nosniff"
-        );
-        assert_eq!(
-            response.headers().get(header::X_FRAME_OPTIONS).unwrap(),
-            "DENY"
-        );
-        assert_eq!(
-            response.headers().get(header::X_XSS_PROTECTION).unwrap(),
-            "1; mode=block"
-        );
-        assert_eq!(
-            response.headers().get(header::REFERRER_POLICY).unwrap(),
-            "strict-origin-when-cross-origin"
+        assert_header(&response, header::X_CONTENT_TYPE_OPTIONS, "nosniff");
+        assert_header(&response, header::X_FRAME_OPTIONS, "DENY");
+        assert_header(&response, header::X_XSS_PROTECTION, "1; mode=block");
+        assert_header(
+            &response,
+            header::REFERRER_POLICY,
+            "strict-origin-when-cross-origin",
         );
     }
 }

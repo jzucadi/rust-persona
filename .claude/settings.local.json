@@ -19,7 +19,19 @@
       "Bash(cargo outdated:*)",
       "Bash(cargo test:*)",
       "Bash(cargo fmt:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(npm search:*)",
+      "Bash(cargo install:*)",
+      "Bash(claude mcp remove:*)",
+      "mcp__filesystem__list_allowed_directories",
+      "mcp__filesystem__directory_tree",
+      "mcp__rust-mcp__cargo-check",
+      "mcp__rust-mcp__cargo-test",
+      "mcp__rust-mcp__cargo-clippy",
+      "mcp__rust-mcp__cargo-fmt"
     ],
     "deny": [],
     "ask": []

@@ -2,6 +2,8 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct JobEntry {
+    /// Unique identifier for ordering entries in the JSON database.
+    /// Currently used for deserialization ordering; may be used for sorting/filtering in the future.
     #[allow(dead_code)]
     pub key: u32,
     pub name: String,
